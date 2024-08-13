@@ -3,8 +3,12 @@ package com.example.demo;
 import com.example.demo.hello.HelloService;
 import com.example.demo.hello.ResourceHelloService;
 import com.example.demo.hello.SimpleHelloService;
+import org.springframework.aot.hint.ExecutableMode;
+import org.springframework.aot.hint.RuntimeHints;
+import org.springframework.aot.hint.RuntimeHintsRegistrar;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.context.annotation.ImportRuntimeHints;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.util.ClassUtils;
 import org.springframework.util.ReflectionUtils;
@@ -16,6 +20,7 @@ import java.lang.reflect.Method;
 import java.util.Optional;
 
 @RestController
+@ImportRuntimeHints(DemoController.DemoControllerRuntimeHints.class)
 public class DemoController {
     private final ObjectProvider<HelloService> helloServices;
 
@@ -61,4 +66,17 @@ public class DemoController {
     }
 
     // Sprint AOT: RuntimeHintsRegistrar
+    static class DemoControllerRuntimeHints implements RuntimeHintsRegistrar {
+        @Override
+        public void registerHints(RuntimeHints hints, ClassLoader classLoader) {
+            // fix reflection issue
+            hints.reflection()
+                    .registerConstructor(SimpleHelloService.class.getDeclaredConstructors()[0], ExecutableMode.INVOKE)
+                    .registerMethod(ReflectionUtils.findMethod(SimpleHelloService.class, "sayHello", String.class), ExecutableMode.INVOKE);
+
+            // fix resource issue
+            hints.resources()
+                    .registerPattern("hello.txt");
+        }
+    }
 }
